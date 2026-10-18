@@ -1,4 +1,4 @@
-package com.example.embedding.client;
+package com.example.embedding.dto;
 
 import com.example.embedding.dto.OllamaEmbedRequest;
 import com.example.embedding.dto.OllamaEmbedResponse;
