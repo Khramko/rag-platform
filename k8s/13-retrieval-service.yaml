@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-retrieval-service
+  namespace: rag
+  labels:
+    app: rag-retrieval-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-retrieval-service
+  template:
+    metadata:
+      labels:
+        app: rag-retrieval-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8084"
+    spec:
+      containers:
+        - name: retrieval-service
+          image: rag/retrieval-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+              name: http
+          envFrom:
+            - configMapRef:
+                name: rag-config
+            - secretRef:
+                name: rag-secrets
+          env:
+            # Переопределяем endpoint явно — на случай, если образ ещё
+            # не пересобран с ${OTLP_ENDPOINT:...} в application.yml
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://jaeger:4318/v1/traces"
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8084
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "384Mi"
+            limits:
+              cpu: "1"
+              memory: "768Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-retrieval-service
+  namespace: rag
+  labels:
+    app: rag-retrieval-service
+spec:
+  selector:
+    app: rag-retrieval-service
+  ports:
+    - name: http
+      port: 8084
+      targetPort: 8084

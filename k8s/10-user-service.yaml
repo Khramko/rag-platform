@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-user-service
+  namespace: rag
+  labels:
+    app: rag-user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-user-service
+  template:
+    metadata:
+      labels:
+        app: rag-user-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8081"
+    spec:
+      containers:
+        - name: user-service
+          image: rag/user-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              name: http
+          envFrom:
+            - configMapRef:
+                name: rag-config
+            - secretRef:
+                name: rag-secrets
+          env:
+            # Для user-service БД — user_db, а не общий DB_HOST.
+            # Spring Boot читает spring.datasource.url из application.yml,
+            # где уже подставлены ${DB_HOST}:${DB_PORT}/user_db.
+            # DB_HOST/DB_PORT приходят из rag-config → ничего дополнительно не нужно.
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "384Mi"
+            limits:
+              cpu: "1"
+              memory: "768Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-user-service
+  namespace: rag
+  labels:
+    app: rag-user-service
+spec:
+  selector:
+    app: rag-user-service
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081

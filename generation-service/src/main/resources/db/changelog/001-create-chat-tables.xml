@@ -14,10 +14,10 @@
                 <constraints nullable="false"/>
             </column>
             <column name="title" type="VARCHAR(255)"/>
-            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
-            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
         </createTable>
 
         <createIndex tableName="chats" indexName="idx_chats_user_id">
@@ -43,7 +43,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="sources" type="TEXT"/>
-            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
         </createTable>

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-config
+  namespace: rag
+data:
+  # --- PostgreSQL ---
+  DB_HOST: "rag-postgres"
+  DB_PORT: "5432"
+  # --- Kafka ---
+  KAFKA_BOOTSTRAP: "rag-kafka:9092"
+  # --- MinIO ---
+  MINIO_URL: "http://rag-minio:9000"
+  # --- Ollama (на хосте) ---
+  OLLAMA_URL: "http://ollama-host.rag.svc.cluster.local:11434"
+  OLLAMA_MODEL: "nomic-embed-text"
+  OLLAMA_CHAT_MODEL: "qwen3:4b-instruct"
+  # --- Межсервисные вызовы ---
+  USER_SERVICE_URL: "http://rag-user-service:8081"
+  DOCUMENT_SERVICE_URL: "http://rag-document-service:8082"
+  RETRIEVAL_SERVICE_URL: "http://rag-retrieval-service:8084"
+  GENERATION_SERVICE_URL: "http://rag-generation-service:8085"
+  # --- Tracing ---
+  OTLP_ENDPOINT: "http://jaeger:4318/v1/traces"

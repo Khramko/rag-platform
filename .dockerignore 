@@ -1,0 +1,14 @@
+**/target/
+**/*.iml
+**/.idea/
+.git/
+.gitignore
+web-ui/
+tmp/
+infra/
+*.txt
+*.json
+*.xml
+!pom.xml
+!**/pom.xml
+docker-compose.yml

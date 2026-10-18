@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-kafka
+  namespace: rag
+  labels:
+    app: rag-kafka
+spec:
+  # КРИТИЧНО для KRaft: DNS-имя rag-kafka должно резолвиться
+  # ещё до того, как под станет Ready, иначе контроллер не найдёт себя
+  publishNotReadyAddresses: true
+  selector:
+    app: rag-kafka
+  ports:
+    - name: plaintext
+      port: 9092
+      targetPort: 9092
+    - name: controller
+      port: 9093
+      targetPort: 9093
