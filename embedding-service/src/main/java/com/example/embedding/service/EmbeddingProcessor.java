@@ -2,8 +2,8 @@ package com.example.embedding.service;
 
 import com.example.common.event.EmbeddingCreatedEvent;
 import com.example.common.event.EmbeddingFailedEvent;
-import com.example.embedding.client.OllamaClient;
 import com.example.embedding.dto.ChunkDto;
+import com.example.embedding.dto.OllamaClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
