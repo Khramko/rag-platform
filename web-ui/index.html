@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Чат — RAG Chat</title>
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body>
+        <header>
+            <h1>RAG Chat</h1>
+            <nav>
+                <a href="index.html" class="active">Чат</a>
+                <a href="documents.html">Документы</a>
+                <span id="user-info"></span>
+                <button onclick="logout()" class="logout-btn">Выйти</button>
+            </nav>
+        </header>
+
+        <main class="chat-container">
+            <div id="messages" class="messages">
+                <div class="empty-state">
+                    <p>Задайте вопрос по вашим документам</p>
+                    <p>
+                        Если ещё не загрузили — перейдите на вкладку «Документы»
+                    </p>
+                </div>
+            </div>
+
+            <form id="chat-form" class="chat-form">
+                <textarea
+                    id="query"
+                    placeholder="Спросите что-нибудь по документам… (Enter — отправить, Shift+Enter — новая строка)"
+                    rows="3"
+                    required
+                ></textarea>
+                <button type="submit" id="send-btn">Отправить</button>
+            </form>
+        </main>
+
+        <script src="js/auth.js"></script>
+        <script src="js/api.js"></script>
+        <script src="js/chat.js"></script>
+        <script>
+            requireAuth();
+            const user = getUser();
+            if (user)
+                document.getElementById("user-info").textContent = user.email;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Вход — RAG Chat</title>
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body class="auth-page">
+        <div class="auth-card">
+            <h1>RAG Chat</h1>
+            <h2>Вход в систему</h2>
+            <form id="login-form">
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="Email"
+                    required
+                    autocomplete="email"
+                />
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Пароль"
+                    required
+                    autocomplete="current-password"
+                />
+                <button type="submit">Войти</button>
+            </form>
+            <p class="auth-link">
+                Нет аккаунта? <a href="register.html">Зарегистрироваться</a>
+            </p>
+            <div id="error" class="auth-error"></div>
+        </div>
+        <script src="js/auth.js"></script>
+        <script>
+            document
+                .getElementById("login-form")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById("email").value;
+                    const password = document.getElementById("password").value;
+                    const btn = e.target.querySelector("button");
+                    btn.disabled = true;
+                    try {
+                        await login(email, password);
+                        window.location.href = "index.html";
+                    } catch (err) {
+                        document.getElementById("error").textContent =
+                            err.message;
+                        btn.disabled = false;
+                    }
+                });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: user-service-auth
+              uri: ${USER_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**
+
+            - id: document-service
+              uri: ${DOCUMENT_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/documents/**
+
+            - id: retrieval-service
+              uri: ${RETRIEVAL_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/search/**
+
+            - id: generation-service
+              uri: ${GENERATION_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/rag/**
+
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production-please-use-long-random-string-at-least-32-bytes}
+  issuer: rag-platform
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    com.example.gateway: DEBUG
+    reactor.netty: INFO

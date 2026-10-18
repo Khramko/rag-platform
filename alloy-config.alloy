@@ -1,0 +1,29 @@
+// Находим все контейнеры Docker
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Собираем логи с найденных контейнеров
+loki.source.docker "default" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  forward_to    = [loki.write.local.receiver]
+  relabel_rules = loki.relabel.containers.rules
+}
+
+// Добавляем лейбл с именем сервиса (из имени контейнера)
+loki.relabel "containers" {
+  forward_to = []
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "service"
+  }
+}
+
+// Отправляем в Loki
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Регистрация — RAG Chat</title>
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body class="auth-page">
+        <div class="auth-card">
+            <h1>RAG Chat</h1>
+            <h2>Создание аккаунта</h2>
+            <form id="register-form">
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="Email"
+                    required
+                    autocomplete="email"
+                />
+                <input
+                    type="text"
+                    id="displayName"
+                    placeholder="Отображаемое имя"
+                    autocomplete="name"
+                />
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Пароль (минимум 6 символов)"
+                    required
+                    minlength="6"
+                    autocomplete="new-password"
+                />
+                <button type="submit">Зарегистрироваться</button>
+            </form>
+            <p class="auth-link">
+                Уже есть аккаунт? <a href="login.html">Войти</a>
+            </p>
+            <div id="error" class="auth-error"></div>
+        </div>
+        <script src="js/auth.js"></script>
+        <script>
+            document
+                .getElementById("register-form")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById("email").value;
+                    const password = document.getElementById("password").value;
+                    const displayName =
+                        document.getElementById("displayName").value;
+                    const btn = e.target.querySelector("button");
+                    btn.disabled = true;
+                    try {
+                        await register(email, password, displayName);
+                        window.location.href = "index.html";
+                    } catch (err) {
+                        document.getElementById("error").textContent =
+                            err.message;
+                        btn.disabled = false;
+                    }
+                });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: generation-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/chat_db
+    username: ${DB_USER:app_user}
+    password: ${DB_PASSWORD:securePassword123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+server:
+  port: 8085
+  netty:
+    idle-timeout: 300s
+
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  chat-model: ${OLLAMA_CHAT_MODEL:qwen3:4b-instruct}
+  timeout-seconds: 300
+  temperature: 0.7
+  max-tokens: 2048
+
+retrieval-service:
+  base-url: ${RETRIEVAL_SERVICE_URL:http://localhost:8084}
+  top-k: 5
+
+rag:
+  max-context-chars: 4000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    com.example.generation: DEBUG
+    org.springframework.web.reactive: INFO
+    reactor.netty: INFO

@@ -1,0 +1,97 @@
+spring:
+  application:
+    name: embedding-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/vec_db
+    username: ${DB_USER:app_user}
+    password: ${DB_PASSWORD:securePassword123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+
+    # ★ ИСПРАВЛЕНИЕ: продюсер с JsonSerializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
+
+    consumer:
+      group-id: embedding-service
+      auto-offset-reset: earliest
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.example.common.event"
+        spring.json.value.default.type: com.example.common.event.DocumentUploadedEvent
+        spring.json.use.type.headers: false
+
+    listener:
+      observation-enabled: true
+      # ★ ИСПРАВЛЕНИЕ: ретраи, чтобы сообщение не терялось при первой ошибке
+      # (без этого Spring Kafka использует FixedBackOff(0,0) и коммитит offset
+      #  даже при исключении — сообщение «съедается»)
+      # В Spring Boot 3.x это настраивается через bean DefaultErrorHandler,
+      # см. KafkaConfig ниже.
+
+    template:
+      observation-enabled: true
+
+server:
+  port: 8083
+
+# --- Ollama (локальная LLM) ---
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:nomic-embed-text}
+  embedding-dimension: 768
+  batch-size: 16
+
+# --- Document-service API (для чтения чанков) ---
+document-service:
+  base-url: ${DOCUMENT_SERVICE_URL:http://localhost:8082}
+
+# --- Kafka topics ---
+kafka:
+  topics:
+    document-uploaded: document.uploaded
+    embedding-created: embedding.created
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    com.example.embedding: DEBUG
+    org.springframework.kafka: INFO
