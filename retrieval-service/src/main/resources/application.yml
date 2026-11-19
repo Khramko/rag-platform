@@ -22,7 +22,7 @@ ollama:
   timeout-seconds: 30
 
 retrieval:
-  default-top-k: 5
+  default-top-k: 10
   max-top-k: 50
 
 management:

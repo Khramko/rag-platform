@@ -22,7 +22,7 @@ spec:
       containers:
         - name: retrieval-service
           image: rag/retrieval-service:1.0.0
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8084
               name: http

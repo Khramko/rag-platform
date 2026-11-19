@@ -11,7 +11,7 @@ data:
   KAFKA_BOOTSTRAP: "rag-kafka:9092"
   # --- MinIO ---
   MINIO_URL: "http://rag-minio:9000"
-  # --- Ollama (на хосте) ---
+  # --- Ollama (на хосте, через Service без селектора) ---
   OLLAMA_URL: "http://ollama-host.rag.svc.cluster.local:11434"
   OLLAMA_MODEL: "nomic-embed-text"
   OLLAMA_CHAT_MODEL: "qwen3:4b-instruct"
@@ -20,5 +20,6 @@ data:
   DOCUMENT_SERVICE_URL: "http://rag-document-service:8082"
   RETRIEVAL_SERVICE_URL: "http://rag-retrieval-service:8084"
   GENERATION_SERVICE_URL: "http://rag-generation-service:8085"
-  # --- Tracing ---
+  # --- Tracing / Logs ---
   OTLP_ENDPOINT: "http://jaeger:4318/v1/traces"
+  LOKI_URL: "http://loki:3100/loki/api/v1/push"

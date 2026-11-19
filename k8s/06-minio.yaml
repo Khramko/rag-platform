@@ -1,3 +1,103 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: rag
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-minio
+  namespace: rag
+  labels:
+    app: rag-minio
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rag-minio
+  template:
+    metadata:
+      labels:
+        app: rag-minio
+    spec:
+      containers:
+        - name: minio
+          image: pgsty/silo:latest
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          ports:
+            - containerPort: 9000
+              name: s3
+            - containerPort: 9001
+              name: console
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rag-secrets
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rag-secrets
+                  key: MINIO_ROOT_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-minio
+  namespace: rag
+  labels:
+    app: rag-minio
+spec:
+  selector:
+    app: rag-minio
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# Job создания бакета — запускается после того, как MinIO готов
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -5,6 +105,7 @@ metadata:
   namespace: rag
 spec:
   backoffLimit: 10
+  ttlSecondsAfterFinished: 300
   template:
     spec:
       restartPolicy: OnFailure
@@ -38,10 +139,8 @@ spec:
             - sh
             - -c
             - |
-              # Ждём, пока S3 API ответит (init-контейнер проверяет только TCP)
               until aws --endpoint-url http://rag-minio:9000 s3 ls >/dev/null 2>&1; do
                 echo "waiting for S3 API..."; sleep 2;
               done
-              # Создаём bucket (идемпотентно: если есть — ошибку игнорируем)
               aws --endpoint-url http://rag-minio:9000 s3 mb s3://documents || true
               aws --endpoint-url http://rag-minio:9000 s3 ls

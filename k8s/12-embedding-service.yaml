@@ -21,8 +21,8 @@ spec:
     spec:
       containers:
         - name: embedding-service
-          image: rag/embedding-service:1.0.0
-          imagePullPolicy: IfNotPresent
+          image: rag/embedding-service:1.0.1
+          imagePullPolicy: Always
           ports:
             - containerPort: 8083
               name: http

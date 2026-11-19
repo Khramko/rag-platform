@@ -2,13 +2,14 @@
 <html lang="ru">
     <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Вход — RAG Chat</title>
         <link rel="stylesheet" href="css/style.css" />
     </head>
     <body class="auth-page">
         <div class="auth-card">
             <h1>RAG Chat</h1>
-            <h2>Вход в систему</h2>
+            <h2>Вход в аккаунт</h2>
             <form id="login-form">
                 <input
                     type="email"
@@ -16,6 +17,7 @@
                     placeholder="Email"
                     required
                     autocomplete="email"
+                    autofocus
                 />
                 <input
                     type="password"
@@ -24,7 +26,7 @@
                     required
                     autocomplete="current-password"
                 />
-                <button type="submit">Войти</button>
+                <button type="submit" id="login-btn">Войти</button>
             </form>
             <p class="auth-link">
                 Нет аккаунта? <a href="register.html">Зарегистрироваться</a>
@@ -33,20 +35,28 @@
         </div>
         <script src="js/auth.js"></script>
         <script>
+            // Уже авторизован → сразу в чат
+            if (getToken()) {
+                window.location.href = "index.html";
+            }
+
             document
                 .getElementById("login-form")
                 .addEventListener("submit", async (e) => {
                     e.preventDefault();
                     const email = document.getElementById("email").value;
                     const password = document.getElementById("password").value;
-                    const btn = e.target.querySelector("button");
+                    const btn = document.getElementById("login-btn");
+                    const errorEl = document.getElementById("error");
+
                     btn.disabled = true;
+                    errorEl.textContent = "";
+
                     try {
                         await login(email, password);
                         window.location.href = "index.html";
                     } catch (err) {
-                        document.getElementById("error").textContent =
-                            err.message;
+                        errorEl.textContent = err.message;
                         btn.disabled = false;
                     }
                 });

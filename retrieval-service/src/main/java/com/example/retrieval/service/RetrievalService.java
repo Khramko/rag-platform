@@ -3,6 +3,9 @@ package com.example.retrieval.service;
 import com.example.retrieval.client.OllamaClient;
 import com.example.retrieval.dto.SearchResult;
 import com.example.retrieval.repository.EmbeddingSearchRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,33 +21,44 @@ public class RetrievalService {
 
     private final OllamaClient ollamaClient;
     private final EmbeddingSearchRepository searchRepository;
+    private final MeterRegistry meterRegistry;   // ← добавлено
 
-    @Value("${retrieval.default-top-k:5}")
+    @Value("${retrieval.default-top-k:10}")
     private int defaultTopK;
 
     @Value("${retrieval.max-top-k:50}")
     private int maxTopK;
 
-    /**
-     * Ищет top-K чанков, похожих на запрос.
-     */
+    @Value("${ollama.model}")
+    private String model;                        // ← добавлено
+
+    private Timer queryEmbeddingTimer;
+    private Timer searchTimer;
+
+    @PostConstruct
+    void initTimers() {
+        this.queryEmbeddingTimer = Timer.builder("rag.retrieval.query_embedding.duration")
+                .description("Time to embed the user query via Ollama")
+                .tag("model", model)
+                .publishPercentileHistogram()
+                .publishPercentiles(0.5, 0.95, 0.99)
+                .register(meterRegistry);
+
+        this.searchTimer = Timer.builder("rag.retrieval.search.duration")
+                .description("Time to run vector search in pgvector")
+                .publishPercentileHistogram()
+                .publishPercentiles(0.5, 0.95, 0.99)
+                .register(meterRegistry);
+    }
+
     public List<SearchResult> search(String query, UUID userId, Integer topK) {
         int k = topK == null ? defaultTopK : Math.min(topK, maxTopK);
 
-        long start = System.currentTimeMillis();
+        float[] queryVector = queryEmbeddingTimer.record(() ->
+                ollamaClient.embed(query));
 
-        // 1. Эмбеддинг запроса
-        float[] queryVector = ollamaClient.embed(query);
-        long embedTime = System.currentTimeMillis() - start;
-
-        // 2. Векторный поиск
-        List<SearchResult> results = searchRepository.searchSimilar(queryVector, userId, k);
-        long totalTime = System.currentTimeMillis() - start;
-
-        log.info("Search done: query='{}', userId={}, topK={}, results={}, embedTime={}ms, totalTime={}ms",
-                truncate(query, 50), userId, k, results.size(), embedTime, totalTime);
-
-        return results;
+        return searchTimer.record(() ->
+                searchRepository.searchSimilar(queryVector, userId, k));
     }
 
     private String truncate(String s, int max) {

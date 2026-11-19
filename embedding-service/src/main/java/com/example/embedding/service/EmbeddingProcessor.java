@@ -3,7 +3,10 @@ package com.example.embedding.service;
 import com.example.common.event.EmbeddingCreatedEvent;
 import com.example.common.event.EmbeddingFailedEvent;
 import com.example.embedding.dto.ChunkDto;
-import com.example.embedding.dto.OllamaClient;
+import com.example.embedding.client.OllamaClient;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,12 +27,36 @@ public class EmbeddingProcessor {
     private final ChunkFetcher chunkFetcher;
     private final OllamaClient ollamaClient;
     private final JdbcTemplate jdbcTemplate;
-    private final KafkaTemplate<String, Object> kafkaTemplate;   // ← НОВОЕ
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final MeterRegistry meterRegistry;
 
     @Value("${ollama.model}")
     private String model;
 
+    private Timer embeddingTimer;
+    private Timer documentTimer;
+
+    @PostConstruct
+    void initTimers() {
+        this.embeddingTimer = Timer.builder("rag.embedding.duration")
+                .description("Time to compute one embedding via Ollama")
+                .tag("model", model)
+                .publishPercentileHistogram()
+                .publishPercentiles(0.5, 0.95, 0.99)
+                .register(meterRegistry);
+
+        this.documentTimer = Timer.builder("rag.document.embedding.duration")
+                .description("Time to embed a whole document")
+                .publishPercentileHistogram()
+                .publishPercentiles(0.5, 0.95, 0.99)
+                .register(meterRegistry);
+    }
+
     public void processDocument(UUID documentId, UUID userId, UUID sagaId) {
+        documentTimer.record(() -> doProcessDocument(documentId, userId, sagaId));
+    }
+
+    private void doProcessDocument(UUID documentId, UUID userId, UUID sagaId) {
         try {
             List<ChunkDto> chunks = chunkFetcher.fetchChunks(documentId, userId);
             if (chunks.isEmpty()) {
@@ -39,7 +66,12 @@ public class EmbeddingProcessor {
             int saved = 0;
             for (ChunkDto chunk : chunks) {
                 if (embeddingExists(chunk.id())) continue;
-                float[] vector = ollamaClient.embed(chunk.content());
+
+                // Timer.record(Supplier) — возвращает результат лямбды.
+                // Важно: Runnable потерял бы float[] (был бы баг).
+                float[] vector = embeddingTimer.record(() ->
+                        ollamaClient.embed(chunk.content()));
+
                 saveEmbedding(chunk, userId, vector);
                 saved++;
             }
